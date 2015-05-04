@@ -3,6 +3,7 @@
 
 var React = require('react-native');
 var {
+  AsyncStorage,
   AppRegistry,
   StyleSheet,
   Text,
@@ -23,6 +24,7 @@ var _mock_data_street = {location: '55 University Blvd'};
 var _mock_location_granularity = {Country: _mock_data_country, State: _mock_data_state, City: _mock_data_city, Street:_mock_data_street};
 
 var fetchUrl = "http://127.0.0.1:123/api/";
+var STORAGE_KEY = '@GPSReverseGeocoding:granularity';
 
 var GranularityButton = React.createClass({
   render: function() {
@@ -86,6 +88,12 @@ var GPSReverseGeocoding = React.createClass({
 
   _onPressButton: function(buttonName: string) {
     this.state.granularity = buttonName;
+
+    AsyncStorage.setItem(STORAGE_KEY, buttonName)
+    .then(() => console.log('Saved granularity to disk: ' + buttonName))
+    .catch((error) => console.log('AsyncStorage error: ' + error.message))
+    .done();
+
     this.fetchData();
   },
 
@@ -165,8 +173,17 @@ var GPSReverseGeocoding = React.createClass({
       (error) => console.error(error),
       {enableHighAccuracy: true, timeout: 100, maximumAge: 1000});
 
-    this.fetchData();
-    setInterval(this.fetchData, _refreshInterval);
+      AsyncStorage.getItem(STORAGE_KEY)
+      .then((value) => {
+        if (value !== null){
+          this.setState({granularity: value});
+          this.fetchData();
+        }
+      })
+      .catch((error) => console.log('AsyncStorage error: ' + error.message))
+      .done(() => {
+        setInterval(this.fetchData, _refreshInterval);
+      });
   },
 
   componentWillUnmount: function() {
