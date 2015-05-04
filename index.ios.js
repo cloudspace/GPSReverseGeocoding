@@ -11,6 +11,8 @@ var {
   StatusBarIOS
 } = React;
 
+var _refreshInterval = 5 * 1000; //5 seconds
+
 var _granularities = ["Country", "State", "City", "Street"];
 
 var _mock_data_country = {location: 'United States'};
@@ -43,10 +45,11 @@ var GPSReverseGeocoding = React.createClass({
     return {
       locationText: 'No Location Available.',
       lastPosition: 'unknown',
+      granularity: 'none'
     };
   },
 
-  fetchData: function(granularity: string) {
+  fetchData: function() {
 
     if (!this.state.lastPosition) {
       this.state.locationText = "No Location Available."
@@ -59,11 +62,16 @@ var GPSReverseGeocoding = React.createClass({
       return;
     }
 
-    var requestUrl = fetchUrl + "?granularity=" + granularity + "&lat=" + coords['latitude'] + "&lng=" + coords['longitude'];
+    if (this.state.granularity === 'none') {
+      this.state.locationText = "No Location Available."
+      return;
+    }
+
+    var requestUrl = fetchUrl + "?granularity=" + this.state.granularity + "&lat=" + coords['latitude'] + "&lng=" + coords['longitude'];
 
     console.log(requestUrl);
 
-    this.state.locationText = "Your current location is: " + _mock_location_granularity[granularity]['location'] + ".";
+    this.state.locationText = "Your current location is: " + _mock_location_granularity[this.state.granularity]['location'] + ".";
 
     // fetch(REQUEST_URL)
     //   .then((response) => response.json())
@@ -77,7 +85,8 @@ var GPSReverseGeocoding = React.createClass({
   },
 
   _onPressButton: function(buttonName: string) {
-    this.fetchData(buttonName);
+    this.state.granularity = buttonName;
+    this.fetchData();
   },
 
   granularityButtons: function() {
@@ -151,15 +160,13 @@ var GPSReverseGeocoding = React.createClass({
     );
   },
   componentDidMount: function() {
-    // navigator.geolocation.getCurrentPosition (
-    //   (initialPosition) => this.setState({initialPosition}),
-    //   (error) => console.error(error),
-    //   {enableHighAccuracy: true, timeout: 100, maximumAge: 1000}
-    // );
     this.watchID = navigator.geolocation.watchPosition(
       (lastPosition) => this.setState({lastPosition}),
       (error) => console.error(error),
       {enableHighAccuracy: true, timeout: 100, maximumAge: 1000});
+
+    this.fetchData();
+    setInterval(this.fetchData, _refreshInterval);
   },
 
   componentWillUnmount: function() {
